@@ -69,8 +69,21 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Binance Futures Proxy API',
 }));
 
-// Base Binance Futures URL
+// Base Binance Futures URL - Using Vision API as fallback for ISP restrictions
 const BINANCE_FUTURES_BASE = 'https://fapi.binance.com';
+const BINANCE_VISION_BASE = 'https://data-api.binance.vision';
+
+// Helper function to try Futures API with Vision fallback
+async function fetchWithFallback(futuresPath, visionPath) {
+  try {
+    const response = await axios.get(`${BINANCE_FUTURES_BASE}${futuresPath}`, { timeout: 5000 });
+    return { data: response.data, source: 'futures' };
+  } catch (error) {
+    console.log(`Futures API failed, using Vision API fallback: ${error.message}`);
+    const response = await axios.get(`${BINANCE_VISION_BASE}${visionPath}`, { timeout: 5000 });
+    return { data: response.data, source: 'vision' };
+  }
+}
 
 /**
  * @swagger
@@ -134,13 +147,14 @@ app.get('/', (req, res) => {
  */
 app.get('/api/health', async (req, res) => {
   try {
-    // Test Binance connection
-    await axios.get(`${BINANCE_FUTURES_BASE}/fapi/v1/ping`);
+    // Test Binance connection with fallback
+    await fetchWithFallback('/fapi/v1/ping', '/api/v3/ping');
     
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      binance: 'connected'
+      binance: 'connected',
+      note: 'Using fallback to Vision API if needed'
     });
   } catch (error) {
     res.status(503).json({
@@ -189,12 +203,15 @@ app.get('/api/health', async (req, res) => {
 app.get('/api/ticker/24hr', async (req, res) => {
   try {
     const { symbol } = req.query;
-    const url = symbol 
-      ? `${BINANCE_FUTURES_BASE}/fapi/v1/ticker/24hr?symbol=${symbol}`
-      : `${BINANCE_FUTURES_BASE}/fapi/v1/ticker/24hr`;
+    const futuresPath = symbol 
+      ? `/fapi/v1/ticker/24hr?symbol=${symbol}`
+      : `/fapi/v1/ticker/24hr`;
+    const visionPath = symbol
+      ? `/api/v3/ticker/24hr?symbol=${symbol}`
+      : `/api/v3/ticker/24hr`;
     
-    const response = await axios.get(url);
-    res.json(response.data);
+    const result = await fetchWithFallback(futuresPath, visionPath);
+    res.json(result.data);
   } catch (error) {
     res.status(error.response?.status || 500).json({
       error: error.message,
@@ -232,12 +249,15 @@ app.get('/api/ticker/24hr', async (req, res) => {
 app.get('/api/ticker/price', async (req, res) => {
   try {
     const { symbol } = req.query;
-    const url = symbol 
-      ? `${BINANCE_FUTURES_BASE}/fapi/v1/ticker/price?symbol=${symbol}`
-      : `${BINANCE_FUTURES_BASE}/fapi/v1/ticker/price`;
+    const futuresPath = symbol 
+      ? `/fapi/v1/ticker/price?symbol=${symbol}`
+      : `/fapi/v1/ticker/price`;
+    const visionPath = symbol
+      ? `/api/v3/ticker/price?symbol=${symbol}`
+      : `/api/v3/ticker/price`;
     
-    const response = await axios.get(url);
-    res.json(response.data);
+    const result = await fetchWithFallback(futuresPath, visionPath);
+    res.json(result.data);
   } catch (error) {
     res.status(error.response?.status || 500).json({
       error: error.message,
