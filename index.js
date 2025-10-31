@@ -519,13 +519,14 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+// Bind to 0.0.0.0 to make it accessible from outside the container (required for Docker/Easypanel)
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════════════════════╗
 ║     🚀 Binance Futures Proxy API Server Started      ║
 ╚════════════════════════════════════════════════════════╝
 
-📡 Server running on: http://localhost:${PORT}
+📡 Server running on: http://0.0.0.0:${PORT}
 📚 API Documentation: http://localhost:${PORT}/api-docs
 🔥 Ready to proxy Binance Futures requests!
 
@@ -540,6 +541,7 @@ Available Endpoints:
   GET  /api/openInterest      - Open interest
   GET  /api/health            - Health check
 
+🐳 Docker/Easypanel ready - Listening on all interfaces
 Press Ctrl+C to stop
   `);
 });
