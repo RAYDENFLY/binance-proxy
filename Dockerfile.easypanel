@@ -1,7 +1,10 @@
-# Use official Node.js LTS (Long Term Support) image
+# Alternative Dockerfile for Easypanel
+# Use this if main Dockerfile still has issues
+# To use: rename to Dockerfile or build with: docker build -f Dockerfile.easypanel
+
 FROM node:18-alpine
 
-# Install curl for better health checks
+# Install curl for health checks
 RUN apk add --no-cache curl
 
 # Set working directory
@@ -16,16 +19,13 @@ RUN npm ci --only=production
 # Copy application files
 COPY . .
 
-# Expose the port the app runs on
-# Note: Easypanel might override this with PORT env variable
+# Expose the port - Easypanel will override with PORT env
 EXPOSE 3000
 
 # Set environment variables
-# Use PORT from environment or default to 3000 (Easypanel standard)
 ENV NODE_ENV=production
 
-# Health check - simplified with curl for better reliability
-# Increased start-period to 20s to give app more time to initialize
+# Simple health check using curl (more reliable than node http)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=5 \
   CMD curl -f http://localhost:${PORT:-3000}/api/health || exit 1
 

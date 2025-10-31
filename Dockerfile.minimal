@@ -1,0 +1,19 @@
+# Minimal Dockerfile without health check
+# Use this if health check is causing issues
+# Let Easypanel handle health checks externally
+
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+
+EXPOSE 3000
+
+ENV NODE_ENV=production
+
+# No health check - let Easypanel handle it
+CMD ["node", "index.js"]
